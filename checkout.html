@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout | LojaTeste</title>
+<link rel="stylesheet" href="assets/style.css">
+<!-- 1) Inicializa o dataLayer e os eventos da loja (mantenha ANTES do GTM) -->
+<script src="assets/app.js"></script>
+<!-- 2) Cole aqui o snippet do Google Tag Manager (GTM-XXXXXXX) -->
+</head>
+<body>
+<div id="hdr"></div>
+<main>
+  <h2>Checkout</h2>
+  <div class="two">
+    <form id="form">
+      <p class="mut">Use apenas dados fictícios.</p>
+      <label>Nome <input name="nome" required value="Fulano de Teste"></label>
+      <label>E-mail <input name="email" type="email" required value="teste@exemplo.com"></label>
+      <label>CEP <input name="cep" required value="00000-000"></label>
+      <label>Frete
+        <select id="frete"><option value="padrao">Padrão — R$ 15,00</option><option value="expresso">Expresso — R$ 30,00</option></select>
+      </label>
+      <label>Pagamento
+        <select id="pgto" required><option value="">Selecione…</option><option value="cartao">Cartão (fake)</option><option value="pix">Pix (fake)</option><option value="boleto">Boleto (fake)</option></select>
+      </label>
+      <button class="btn" type="submit">Finalizar compra</button>
+    </form>
+    <aside class="card"><h3>Resumo</h3><div id="sum"></div></aside>
+  </div>
+</main>
+<div id="ftr"></div>
+</body>
+</html>
