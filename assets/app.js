@@ -17,11 +17,23 @@ const round = n => Math.round(n * 100) / 100;
 
 // --- dataLayer helpers (loga no console para facilitar o debug) ---
 const track = (event, params = {}) => { dataLayer.push({ event, ...params }); console.log('[dataLayer]', event, params); };
-const ecom = (event, ecommerce) => {
+const ecom = (event, ecommerce, extra = {}) => {
   dataLayer.push({ ecommerce: null }); // limpa o objeto anterior (boa prática GA4)
-  dataLayer.push({ event, ecommerce });
-  console.log('[dataLayer]', event, ecommerce);
+  dataLayer.push({ event, ecommerce, ...extra });
+  console.log('[dataLayer]', event, ecommerce, extra);
 };
+
+// Monta o user_data no padrão de Enhanced Conversions / GA4 (valores normalizados).
+// Em produção, o GTM/Google faz o hash SHA-256 desses campos antes do envio.
+function buildUserData(f) {
+  const digits = f.telefone.replace(/\D/g, '');
+  const [first, ...rest] = f.nome.trim().toLowerCase().split(/\s+/);
+  return {
+    email: f.email.trim().toLowerCase(),
+    phone_number: '+' + (digits.startsWith('55') && digits.length > 11 ? digits : '55' + digits), // E.164
+    address: { first_name: first, last_name: rest.join(' '), postal_code: f.cep.replace(/\D/g, ''), country: 'BR' }
+  };
+}
 
 // --- carrinho (localStorage) ---
 const getCart = () => { try { return JSON.parse(localStorage.getItem('cart')) || []; } catch (e) { return []; } };
@@ -118,7 +130,9 @@ pages.checkout = () => {
   $('#pgto').onchange = () => ecom('add_payment_info', { ...base(), payment_type: $('#pgto').value });
   $('#form').onsubmit = e => {
     e.preventDefault();
-    const order = { transaction_id: 'T' + Date.now(), ...base(), shipping: frete(), tax: 0 };
+    const user_data = buildUserData(Object.fromEntries(new FormData(e.target)));
+    track('checkout_customer_data', { user_data });
+    const order = { transaction_id: 'T' + Date.now(), ...base(), shipping: frete(), tax: 0, user_data };
     localStorage.setItem('lastOrder', JSON.stringify(order));
     setCart([]);
     location.href = 'confirmacao.html';
@@ -129,13 +143,14 @@ pages.confirmacao = () => {
   const o = JSON.parse(localStorage.getItem('lastOrder') || 'null');
   if (!o) return location.replace('index.html');
   if (!o.sent) { // evita purchase duplicado ao recarregar a página
-    const { sent, ...data } = o;
-    ecom('purchase', data);
+    const { sent, user_data, ...data } = o;
+    ecom('purchase', data, { user_data });
     o.sent = true; localStorage.setItem('lastOrder', JSON.stringify(o));
   }
   $('#order').innerHTML = `<p>Pedido <strong>${o.transaction_id}</strong></p>`
     + o.items.map(i => `<div>${i.quantity}× ${i.item_name} — ${brl(i.price * i.quantity)}</div>`).join('')
-    + `<div>Frete: ${brl(o.shipping)}</div><strong>Total: ${brl(o.value + o.shipping)}</strong>`;
+    + `<div>Frete: ${brl(o.shipping)}</div><strong>Total: ${brl(o.value + o.shipping)}</strong>`
+    + (o.user_data ? `<hr><div class="mut">Cliente: ${o.user_data.email} · ${o.user_data.phone_number}</div>` : '');
 };
 
 document.addEventListener('DOMContentLoaded', () => { layout(); if (pages[PAGE]) pages[PAGE](); });
